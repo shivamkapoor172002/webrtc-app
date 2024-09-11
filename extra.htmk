@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebRTC Example</title>
+    <script src="https://unpkg.com/simple-peer/simplepeer.min.js"></script>
+    <!-- Import Firebase SDKs -->
+    <script type="module">
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
+      import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
+
+      // Your web app's Firebase configuration
+      const firebaseConfig = {
+        apiKey: "AIzaSyAL7bggiQ82831f5p0QK1ijgNVT-0t5xI0",
+        authDomain: "screenshot-d87e4.firebaseapp.com",
+        projectId: "screenshot-d87e4",
+        storageBucket: "screenshot-d87e4.appspot.com",
+        messagingSenderId: "358248125741",
+        appId: "1:358248125741:web:9e5e49e1154aa62aef6fa4",
+        measurementId: "G-Y1C6JKVD9R"
+      };
+
+      // Initialize Firebase
+      const app = initializeApp(firebaseConfig);
+      const db = getFirestore(app);
+
+      // WebRTC signaling logic
+      let peer1;
+      let peer2;
+      const signalingDoc = doc(db, 'signaling', 'connection');
+
+      function cleanupPeers() {
+        if (peer1) {
+          peer1.destroy();
+          peer1 = null;
+        }
+        if (peer2) {
+          peer2.destroy();
+          peer2 = null;
+        }
+      }
+
+      function log(message) {
+        console.log(message);
+        document.getElementById('log').innerText += message + '\n';
+      }
+
+      document.getElementById('createOffer').addEventListener('click', async () => {
+        cleanupPeers();
+        peer1 = new SimplePeer({ initiator: true, trickle: false });
+
+        peer1.on('signal', async data => {
+          log('Peer 1 signal data:', data);
+          await setDoc(signalingDoc, { offer: JSON.stringify(data) });  // Save offer to Firestore
+        });
+
+        peer1.on('connect', () => {
+          log('Peer 1 connected');
+          peer1.send('Hello from Peer 1');
+        });
+
+        peer1.on('data', data => {
+          log('Peer 1 received:', data.toString());
+        });
+
+        peer1.on('error', err => {
+          log('Peer 1 error:', err);
+        });
+
+        onSnapshot(signalingDoc, snapshot => {
+          const data = snapshot.data();
+          if (data && data.answer && peer1) {
+            log('Received answer from Firestore:', data.answer);
+            peer1.signal(JSON.parse(data.answer));
+          }
+        });
+      });
+
+      document.getElementById('createAnswer').addEventListener('click', async () => {
+        cleanupPeers();
+        peer2 = new SimplePeer({ initiator: false, trickle: false });
+
+        onSnapshot(signalingDoc, snapshot => {
+          const data = snapshot.data();
+          if (data && data.offer) {
+            log('Received offer from Firestore:', data.offer);
+            peer2.signal(JSON.parse(data.offer));
+          }
+        });
+
+        peer2.on('signal', async data => {
+          log('Peer 2 signal data:', data);
+          await setDoc(signalingDoc, { answer: JSON.stringify(data) });
+        });
+
+        peer2.on('connect', () => {
+          log('Peer 2 connected');
+          peer2.send('Hello from Peer 2');
+        });
+
+        peer2.on('data', data => {
+          log('Peer 2 received:', data.toString());
+        });
+
+        peer2.on('error', err => {
+          log('Peer 2 error:', err);
+        });
+      });
+
+      document.getElementById('pasteAnswerForPeer1').addEventListener('click', async () => {
+        const answer = JSON.parse(document.getElementById('answerForPeer1').value);
+        log('Pasting answer for Peer 1:', answer);
+        if (peer1) {
+          peer1.signal(answer);  // Peer 1 receives the answer from Peer 2
+        }
+      });
+    </script>
+</head>
+<body>
+    <h1>WebRTC Connection</h1>
+    <div>
+        <textarea id="offer" placeholder="Paste offer here"></textarea><br>
+        <button id="createOffer">Create Offer (Peer 1)</button><br>
+        <textarea id="answer" placeholder="Paste answer here"></textarea><br>
+        <button id="createAnswer">Create Answer (Peer 2)</button><br>
+        <textarea id="answerForPeer1" placeholder="Paste answer here (Peer 1)"></textarea><br>
+        <button id="pasteAnswerForPeer1">Paste Answer (Peer 1)</button><br>
+    </div>
+    <h2>Logs:</h2>
+    <pre id="log"></pre>
+</body>
+</html>
