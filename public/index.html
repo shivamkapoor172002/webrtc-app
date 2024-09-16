@@ -3,356 +3,262 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Improved WebRTC Chat Example</title>
-    <script src="https://unpkg.com/simple-peer/simplepeer.min.js"></script>
+    <title>WebRTC Connection - AnyDesk Style</title>
+    <script src="https://unpkg.com/simple-peer@9.11.0/simplepeer.min.js"></script>
     <style>
-       :root {
-    --bg-primary: #0a0c0e;
-    --bg-secondary: #121618;
-    --text-primary: #e0e0e0;
-    --text-secondary: #a0a0a0;
-    --accent-primary: #4a90e2;
-    --accent-secondary: #2c3e50;
-    --success: #27ae60;
-    --error: #e74c3c;
-}
+        :root {
+            --primary-color: #f44336; /* AnyDesk Red */
+            --secondary-color: #f0f0f0; /* Light Gray */
+            --text-color: #333;
+            --accent-color: #4caf50; /* Green */
+            --border-color: #ccc;
+        }
 
-body {
-    font-family: 'Inter', 'Roboto', sans-serif;
-    background: linear-gradient(135deg, var(--bg-primary), var(--bg-secondary));
-    color: var(--text-primary);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: flex-start;
-    min-height: 100vh;
-    margin: 0;
-    padding: 2rem;
-    box-sizing: border-box;
-}
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--secondary-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 0;
+        }
 
-h1 {
-    font-size: 2.5rem;
-    font-weight: 700;
-    color: var(--accent-primary);
-    margin-bottom: 2rem;
-    text-transform: uppercase;
-    letter-spacing: 2px;
-}
+        .wrapper {
+            display: flex;
+            height: 100vh;
+        }
 
-.container {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 2rem;
-    width: 100%;
-    max-width: 1200px;
-}
+        .left-panel {
+            width: 30%;
+            background-color: var(--primary-color);
+            color: white;
+            padding: 20px;
+            box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
 
-.peer-container {
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: 12px;
-    padding: 1.5rem;
-    backdrop-filter: blur(10px);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-    transition: all 0.3s ease;
-}
+        .left-panel h2 {
+            margin-bottom: 20px;
+        }
 
-.peer-container:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 12px 48px rgba(0, 0, 0, 0.2);
-}
+        .connection-area, .message-area {
+            margin-bottom: 20px;
+        }
 
-.peer-container h2 {
-    color: var(--accent-primary);
-    font-size: 1.5rem;
-    margin-bottom: 1rem;
-    font-weight: 600;
-}
+        input[type="text"], input[type="file"] {
+            width: calc(100% - 10px);
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            margin-bottom: 10px;
+        }
 
-.status {
-    font-weight: 500;
-    color: var(--text-secondary);
-    margin-bottom: 1rem;
-    display: flex;
-    align-items: center;
-}
+        button {
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            width: 100%;
+            margin-bottom: 10px;
+            transition: background-color 0.3s;
+        }
 
-.status::before {
-    content: '';
-    display: inline-block;
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    margin-right: 0.5rem;
-    background-color: var(--error);
-}
+        button:hover {
+            background-color: #45a049;
+        }
 
-.status.connected::before {
-    background-color: var(--success);
-}
+        .right-panel {
+            width: 70%;
+            padding: 20px;
+            overflow-y: auto;
+            background-color: white;
+        }
 
-button {
-    background: var(--accent-primary);
-    color: var(--bg-primary);
-    border: none;
-    padding: 0.75rem 1.5rem;
-    border-radius: 6px;
-    font-size: 0.9rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-}
+        .right-panel h2 {
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 10px;
+        }
 
-button:hover {
-    background: var(--accent-secondary);
-    color: var(--text-primary);
-}
+        #log {
+            background-color: #f9f9f9;
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            max-height: 200px;
+            overflow-y: auto;
+            margin-bottom: 20px;
+        }
 
-.chat-log {
-    height: 200px;
-    background: var(--bg-secondary);
-    color: var(--text-primary);
-    overflow-y: auto;
-    border: 1px solid var(--accent-secondary);
-    padding: 1rem;
-    border-radius: 6px;
-    margin-bottom: 1rem;
-    font-size: 0.9rem;
-    line-height: 1.5;
-}
+        #imageContainer {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
 
-input[type="text"] {
-    width: 100%;
-    padding: 0.75rem;
-    border-radius: 6px;
-    border: 1px solid var(--accent-secondary);
-    margin-bottom: 1rem;
-    background: var(--bg-secondary);
-    color: var(--text-primary);
-    font-size: 0.9rem;
-}
+        #imageContainer img {
+            max-width: 150px;
+            border-radius: 5px;
+            transition: transform 0.3s;
+        }
 
-input[type="text"]:focus {
-    outline: none;
-    border-color: var(--accent-primary);
-}
-
-.log-container {
-    width: 100%;
-    max-width: 1200px;
-    margin-top: 2rem;
-    background: rgba(0, 0, 0, 0.2);
-    padding: 1.5rem;
-    border-radius: 12px;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
-}
-
-.log-container h2 {
-    color: var(--accent-primary);
-    font-size: 1.2rem;
-    margin-bottom: 1rem;
-    font-weight: 600;
-}
-
-pre {
-    background: var(--bg-secondary);
-    padding: 1rem;
-    border-radius: 6px;
-    overflow-x: auto;
-    color: var(--text-secondary);
-    font-size: 0.8rem;
-    line-height: 1.4;
-}
-
-/* Scrollbar Styles */
-::-webkit-scrollbar {
-    width: 8px;
-}
-
-::-webkit-scrollbar-track {
-    background: var(--bg-secondary);
-}
-
-::-webkit-scrollbar-thumb {
-    background: var(--accent-secondary);
-    border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-    background: var(--accent-primary);
-}
-
-/* Responsive adjustments */
-@media (max-width: 768px) {
-    body {
-        padding: 1rem;
-    }
-
-    h1 {
-        font-size: 2rem;
-    }
-
-    .container {
-        grid-template-columns: 1fr;
-    }
-}
+        #imageContainer img:hover {
+            transform: scale(1.05);
+        }
     </style>
 </head>
 <body>
-    <h1>Improved WebRTC Chat Example</h1>
-    <div class="container">
-        <div class="peer-container">
-            <h2>Peer 1</h2>
-            <div id="peer1Status" class="status">Disconnected</div>
-            <button id="createOffer">Create Offer (Peer 1)</button>
-            <div id="peer1ChatLog" class="chat-log"></div>
-            <input type="text" id="peer1MessageInput" placeholder="Type a message...">
-            <button id="peer1SendMessage">Send Message</button>
+    <div class="wrapper">
+        <!-- Left Panel: Connection and Message Section -->
+        <div class="left-panel">
+            <div class="connection-area">
+                <h2>Connect</h2>
+                <button id="createOffer">Create New Session</button>
+                <input id="sessionId" placeholder="Session ID" />
+                <button id="joinSession">Join Session</button>
+            </div>
+
+            <div class="message-area">
+                <h2>Messaging</h2>
+                <input id="message" placeholder="Type a message" />
+                <button id="sendMessage" disabled>Send Message</button>
+                <input type="file" id="imageInput" accept="image/*" />
+                <button id="sendImage" disabled>Send Image</button>
+            </div>
         </div>
-        <div class="peer-container">
-            <h2>Peer 2</h2>
-            <div id="peer2Status" class="status">Disconnected</div>
-            <button id="createAnswer">Create Answer (Peer 2)</button>
-            <div id="peer2ChatLog" class="chat-log"></div>
-            <input type="text" id="peer2MessageInput" placeholder="Type a message...">
-            <button id="peer2SendMessage">Send Message</button>
+
+        <!-- Right Panel: Logs and Received Images -->
+        <div class="right-panel">
+            <h2>Logs</h2>
+            <pre id="log"></pre>
+
+            <h2>Received Images</h2>
+            <div id="imageContainer"></div>
         </div>
-    </div>
-    <div class="log-container">
-        <h2>Debug Logs:</h2>
-        <pre id="log"></pre>
     </div>
 
     <script type="module">
+        // Your existing JavaScript code here
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
-        import { getFirestore, doc, setDoc, onSnapshot, updateDoc, deleteField } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
-      
-      const firebaseConfig = {
-        apiKey: "AIzaSyAL7bggiQ82831f5p0QK1ijgNVT-0t5xI0",
-        authDomain: "screenshot-d87e4.firebaseapp.com",
-        projectId: "screenshot-d87e4",
-        storageBucket: "screenshot-d87e4.appspot.com",
-        messagingSenderId: "358248125741",
-        appId: "1:358248125741:web:9e5e49e1154aa62aef6fa4",
-        measurementId: "G-Y1C6JKVD9R"
-      };
+        import { getFirestore, doc, setDoc, onSnapshot, deleteDoc } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
 
-      const app = initializeApp(firebaseConfig);
-  const db = getFirestore(app);
+        const firebaseConfig = { apiKey: "AIzaSyAL7bggiQ82831f5p0QK1ijgNVT-0t5xI0", authDomain: "screenshot-d87e4.firebaseapp.com", projectId: "screenshot-d87e4", storageBucket: "screenshot-d87e4.appspot.com", messagingSenderId: "358248125741", appId: "1:358248125741:web:9e5e49e1154aa62aef6fa4", measurementId: "G-Y1C6JKVD9R" };
 
-  let peer1, peer2;
-  const signalingDoc = doc(db, 'signaling', 'connection');
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
 
-  function cleanupPeers() {
-    if (peer1) {
-      peer1.destroy();
-      peer1 = null;
-    }
-    if (peer2) {
-      peer2.destroy();
-      peer2 = null;
-    }
-    updateStatus(1, "Disconnected");
-    updateStatus(2, "Disconnected");
-  }
+        let peer;
+        let sessionId;
 
-  function log(message) {
-    console.log(message);
-    document.getElementById('log').innerText += message + '\n';
-  }
+        function generateSessionId() {
+            return Math.random().toString(36).substring(2, 15);
+        }
 
-  function updateStatus(peerId, status) {
-    document.getElementById(`peer${peerId}Status`).innerText = status;
-  }
+        function log(message) {
+            console.log(message);
+            document.getElementById('log').innerText += message + '\n';
+        }
 
-  function addMessageToChatLog(peerId, message, isSent) {
-    const chatLog = document.getElementById(`peer${peerId}ChatLog`);
-    const messageElement = document.createElement('div');
-    messageElement.textContent = `${isSent ? 'Sent: ' : 'Received: '} ${message}`;
-    messageElement.style.color = isSent ? 'blue' : 'green';
-    chatLog.appendChild(messageElement);
-    chatLog.scrollTop = chatLog.scrollHeight;
-  }
+        async function createPeer(isInitiator) {
+            if (peer) {
+                peer.destroy();
+            }
 
-  async function createPeer(isInitiator, peerId) {
-    cleanupPeers();
-    updateStatus(peerId, isInitiator ? "Creating offer..." : "Waiting for offer...");
-    
-    const peer = new SimplePeer({ initiator: isInitiator, trickle: false });
+            peer = new SimplePeer({ initiator: isInitiator, trickle: false });
 
-    peer.on('signal', async data => {
-      log(`Peer ${peerId} signal data: ${JSON.stringify(data)}`);
-      if (isInitiator) {
-        await setDoc(signalingDoc, { offer: JSON.stringify(data) });
-      } else {
-        await updateDoc(signalingDoc, { answer: JSON.stringify(data) });
-      }
-    });
+            peer.on('signal', async data => {
+                log('Signal data generated');
+                const signalingDoc = doc(db, 'signaling', sessionId);
+                await setDoc(signalingDoc, { [isInitiator ? 'offer' : 'answer']: JSON.stringify(data) });
+            });
 
-    peer.on('connect', () => {
-      log(`Peer ${peerId} connected`);
-      updateStatus(peerId, "Connected");
-      peer.send(`Hello from Peer ${peerId}`);
-    });
+            peer.on('connect', () => {
+                log('Peer connected');
+                document.getElementById('sendMessage').disabled = false;
+                document.getElementById('sendImage').disabled = false;
+            });
 
-    peer.on('data', data => {
-      log(`Peer ${peerId} received: ${data.toString()}`);
-      addMessageToChatLog(peerId, data.toString(), false);
-    });
+            peer.on('data', data => {
+                const receivedData = JSON.parse(data);
+                if (receivedData.type === 'text') {
+                    log('Received text: ' + receivedData.content);
+                } else if (receivedData.type === 'image') {
+                    log('Received image');
+                    const img = document.createElement('img');
+                    img.src = receivedData.content;
+                    document.getElementById('imageContainer').appendChild(img);
+                }
+            });
 
-    peer.on('error', err => {
-      log(`Peer ${peerId} error: ${err.toString()}`);
-      updateStatus(peerId, `Error: ${err.toString()}`);
-    });
+            peer.on('error', err => {
+                log('Peer error: ' + err);
+            });
 
-    return peer;
-  }
+            onSnapshot(doc(db, 'signaling', sessionId), snapshot => {
+                const data = snapshot.data();
+                if (data) {
+                    if (isInitiator && data.answer) {
+                        log('Received answer');
+                        peer.signal(JSON.parse(data.answer));
+                    } else if (!isInitiator && data.offer) {
+                        log('Received offer');
+                        peer.signal(JSON.parse(data.offer));
+                    }
+                }
+            });
+        }
 
-  document.getElementById('createOffer').addEventListener('click', async () => {
-    peer1 = await createPeer(true, 1);
-    
-    const unsubscribe = onSnapshot(signalingDoc, snapshot => {
-      const data = snapshot.data();
-      if (data && data.answer && peer1) {
-        log('Received answer from Firestore: ' + data.answer);
-        peer1.signal(JSON.parse(data.answer));
-        updateDoc(signalingDoc, { answer: deleteField() });
-        unsubscribe();
-      }
-    });
-  });
+        document.getElementById('createOffer').addEventListener('click', () => {
+            sessionId = generateSessionId();
+            document.getElementById('sessionId').value = sessionId;
+            createPeer(true);
+            log('Offer created. Share the Session ID with your friend.');
+        });
 
-  document.getElementById('createAnswer').addEventListener('click', async () => {
-    peer2 = await createPeer(false, 2);
-    
-    const unsubscribe = onSnapshot(signalingDoc, snapshot => {
-      const data = snapshot.data();
-      if (data && data.offer && peer2) {
-        log('Received offer from Firestore: ' + data.offer);
-        peer2.signal(JSON.parse(data.offer));
-        updateDoc(signalingDoc, { offer: deleteField() });
-        unsubscribe();
-      }
-    });
-  });
+        document.getElementById('joinSession').addEventListener('click', () => {
+            sessionId = document.getElementById('sessionId').value.trim();
+            if (sessionId) {
+                createPeer(false);
+                log('Joining session...');
+            } else {
+                log('Please enter a valid Session ID');
+            }
+        });
 
-  document.getElementById('peer1SendMessage').addEventListener('click', () => {
-    const message = document.getElementById('peer1MessageInput').value;
-    if (peer1 && peer1.connected) {
-      peer1.send(message);
-      addMessageToChatLog(1, message, true);
-      document.getElementById('peer1MessageInput').value = '';
-    }
-  });
+        document.getElementById('sendMessage').addEventListener('click', () => {
+            const message = document.getElementById('message').value;
+            if (peer && peer.connected) {
+                peer.send(JSON.stringify({ type: 'text', content: message }));
+                log('Sent text: ' + message);
+                document.getElementById('message').value = '';
+            } else {
+                log('Peer not connected');
+            }
+        });
 
-  document.getElementById('peer2SendMessage').addEventListener('click', () => {
-    const message = document.getElementById('peer2MessageInput').value;
-    if (peer2 && peer2.connected) {
-      peer2.send(message);
-      addMessageToChatLog(2, message, true);
-      document.getElementById('peer2MessageInput').value = '';
-    }
-  });
-</script>
+        document.getElementById('sendImage').addEventListener('click', () => {
+            const fileInput = document.getElementById('imageInput');
+            const file = fileInput.files[0];
+            if (file && peer && peer.connected) {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    peer.send(JSON.stringify({ type: 'image', content: event.target.result }));
+                    log('Sent image: ' + file.name);
+                    fileInput.value = '';
+                };
+                reader.readAsDataURL(file);
+            } else {
+                log('No image selected or peer not connected');
+            }
+        });
+
+        window.addEventListener('beforeunload', () => {
+            if (sessionId) {
+                deleteDoc(doc(db, 'signaling', sessionId));
+            }
+        });
+    </script>
+</body>
+</html>
